@@ -1,11 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-// import { supabase } from '../lib/supabaseClient'
+import { supabase } from '../lib/supabaseClient'
 import styles from './page.module.css'
 
 export default function Home() {
   const [students, setStudents] = useState([])
+  const [searchTerm, setSearchTerm] = useState('') 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -14,7 +15,7 @@ export default function Home() {
       const { data, error } = await supabase
         .from('students')
         .select('*')
-        .order('created_at', { ascending: false })
+        .order('name', { ascending: true }) 
 
       if (error) {
         setError(error.message)
@@ -24,8 +25,13 @@ export default function Home() {
       setLoading(false)
     }
 
-    //fetchStudents()
+    fetchStudents()
   }, [])
+
+  // Tələbələri adına görə filter edirik
+  const filteredStudents = students.filter(student =>
+    student.name.toLowerCase().includes(searchTerm.toLowerCase())
+  )
 
   return (
     <div className={styles.page}>
@@ -35,6 +41,25 @@ export default function Home() {
       </header>
 
       <main className={styles.main}>
+        {/* Axtarış Inputu */}
+        {!loading && !error && (
+          <div style={{ marginBottom: '20px', width: '100%' }}>
+            <input
+              type="text"
+              placeholder="🔍 Search student by name..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '10px',
+                borderRadius: '6px',
+                border: '1px solid #ccc',
+                fontSize: '16px'
+              }}
+            />
+          </div>
+        )}
+
         {loading && (
           <p className={styles.message}>Loading students...</p>
         )}
@@ -42,20 +67,15 @@ export default function Home() {
         {error && (
           <div className={styles.errorBox}>
             <p className={styles.errorTitle}>Could not connect to Supabase</p>
-            <p className={styles.errorHint}>
-              Make sure you created your <code>.env.local</code> file with your project URL and anon key.
-            </p>
             <code className={styles.errorDetail}>{error}</code>
           </div>
         )}
 
-        {!loading && !error && students.length === 0 && (
-          <p className={styles.message}>
-            No students found. Did you run the SQL and add some rows in your Supabase dashboard?
-          </p>
+        {!loading && !error && filteredStudents.length === 0 && (
+          <p className={styles.message}>No students found matching your search.</p>
         )}
 
-        {!loading && !error && students.length > 0 && (
+        {!loading && !error && filteredStudents.length > 0 && (
           <table className={styles.table}>
             <thead>
               <tr>
@@ -67,7 +87,7 @@ export default function Home() {
               </tr>
             </thead>
             <tbody>
-              {students.map((student) => (
+              {filteredStudents.map((student) => (
                 <tr key={student.id}>
                   <td className={styles.avatarCell}>
                     <img
